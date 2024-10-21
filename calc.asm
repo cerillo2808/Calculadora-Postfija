@@ -5,6 +5,8 @@
 .DATA                                                               
   entrada DB 25 DUP(20H); la entrada es de maximo 25 chars
   peticion DB "Ingrese la expresion a calcular: "
+  fila DB ?
+  columna DB ?
   
 .CODE                                      
                                            
@@ -28,8 +30,10 @@ print:
     
     mov cx, 25
     mov si, 0
+    mov fila, 10
+    mov columna, 43
     
-leerImprimirEntrada:
+leerEntrada:
     
     call ponerCursor
     
@@ -46,8 +50,10 @@ leerImprimirEntrada:
     add di, ax; cambia la posición a [anterior+2]
     mov bl, entrada[si-1]; debido a que si ya fue incrementado, lo que quiero imprimir es el anterior
     call imprimir
+    inc columna
+    call ponerCursor
     
-    loop leerImprimirEntrada
+    loop leerEntrada
    
    getch PROC    NEAR                        
         MOV     AH,10H                                          
@@ -81,8 +87,8 @@ leerImprimirEntrada:
    ponerCursor PROC
    mov ah, 02h; comando para poner el cursor
    mov bh, 00
-   mov dh, 10; renglon
-   mov dl, 43; columna
+   mov dh, fila
+   mov dl, columna
    int 10h
    ret
    ponerCursor ENDP
