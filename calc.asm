@@ -5,8 +5,11 @@
 .DATA                                                               
   entrada DB 25 DUP(20H); la entrada es de maximo 25 chars
   peticion DB "Ingrese la expresion a calcular: "
+  respuesta DB "Resultado: "
   fila DB ?
   columna DB ?
+  parentesisAbiertos DB 0
+  parentesisCerrados DB 0
   
 .CODE                                      
                                            
@@ -16,17 +19,11 @@ Begin:
     cld                                
     mov ax,0B800H                  
     mov es,ax  
-    
-    mov ah, 07          
+              
     mov cx, 32; la hilera es de 32 chars          
     mov si, offset peticion
     mov di, 1620; posicion de la hilera en pantalla        
-    cld
-    
-print:                      
-        lodsb               
-        stosw               
-        loop    print; imprime la peticion
+    call imprimirString
     
     mov cx, 25
     mov si, 0
@@ -49,11 +46,16 @@ leerEntrada:
     mul bl
     add di, ax; cambia la posición a [anterior+2]
     mov bl, entrada[si-1]; debido a que si ya fue incrementado, lo que quiero imprimir es el anterior
-    call imprimir
+    call imprimirChar
     inc columna
     call ponerCursor
     
     loop leerEntrada
+              
+    mov cx, 11; la hilera es de 32 chars          
+    mov si, offset respuesta
+    mov di, 1824; posicion de la hilera en pantalla
+    call imprimirString
    
    getch PROC    NEAR                        
         MOV     AH,10H                                          
@@ -75,14 +77,26 @@ leerEntrada:
      RET
    leer ENDP
    
-   imprimir PROC
+   imprimirChar PROC
    add bl, 30H; cambia de bin a ascii
    mov AH, 07H
    mov al, bl
    cld
    stosw
    RET
-   imprimir ENDP
+   imprimirChar ENDP
+   
+   imprimirString PROC
+    mov ah, 07                  
+    cld
+    
+print:                      
+        lodsb               
+        stosw               
+        loop    print; imprime la peticion
+        
+   ret
+   imprimirString ENDP
    
    ponerCursor PROC
    mov ah, 02h; comando para poner el cursor
