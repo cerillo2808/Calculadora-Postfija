@@ -10,6 +10,7 @@
   columna DB ?
   parentesisAbiertos DB 0
   parentesisCerrados DB 0
+  resultado DB 0
   
 .CODE                                      
                                            
@@ -56,6 +57,9 @@ leerEntrada:
     mov si, offset respuesta
     mov di, 1824; posicion de la hilera en pantalla
     call imprimirString
+    
+    mov bl, resultado
+    call imprimirChar
    
    getch PROC    NEAR                        
         MOV     AH,10H                                          
@@ -106,6 +110,5 @@ print:
    int 10h
    ret
    ponerCursor ENDP
-   
    
 end Begin
