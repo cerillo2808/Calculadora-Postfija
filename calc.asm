@@ -8,9 +8,9 @@
   respuesta DB "Resultado: "
   fila DB ?
   columna DB ?
-  parentesisAbiertos DB 0
-  parentesisCerrados DB 0
-  resultado DB 0
+  parentesisAbiertos DB 0H
+  parentesisCerrados DB 0H
+  resultado DB 0H
   
 .CODE                                      
                                            
@@ -36,7 +36,12 @@ leerEntrada:
     call ponerCursor
     
     call getch
+    
+    cmp al, 0DH; igual a enter
+    je analizarEntrada
+    
     add al, -30H; cambiar de ascii a binario
+    
     mov entrada[si], al; guardar la entrada en el vector
     
     mov ah, 07; comando para imprimir
@@ -45,14 +50,17 @@ leerEntrada:
     mov ax, si
     mov bl, 2h
     mul bl
-    add di, ax; cambia la posición a [anterior+2]
+    add di, ax; cambia la posici?n a [anterior+2]
     mov bl, entrada[si-1]; debido a que si ya fue incrementado, lo que quiero imprimir es el anterior
     call imprimirChar
+    call verificarParentesis
     inc columna
     call ponerCursor
     
     loop leerEntrada
-              
+    
+analizarEntrada:  
+    
     mov cx, 11; la hilera es de 32 chars          
     mov si, offset respuesta
     mov di, 1824; posicion de la hilera en pantalla
@@ -60,6 +68,7 @@ leerEntrada:
     
     mov bl, resultado
     call imprimirChar
+    
    
    getch PROC    NEAR                        
         MOV     AH,10H                                          
@@ -110,5 +119,34 @@ print:
    int 10h
    ret
    ponerCursor ENDP
+   
+   suma PROC
+   add al, bl; resultado queda en al
+   ret
+   suma ENDP
+   
+   division PROC; hay que darle el dividendo a ax
+   div al; resultado entero queda en al
+   ret
+   division ENDP
+   
+   multiplicacion PROC; hay que darle el otro factor a al
+   mul bl; resultado queda en al
+   ret
+   multiplicacion ENDP
+   
+   verificarParentesis PROC
+   cmp bl, '('; es igual a (, 28H
+   je esParentesisAbierto
+   cmp bl, ')'; es igual a ), 29H
+   jne terminar
+   inc parentesisCerrados
+   jmp terminar
+   
+esParentesisAbierto:
+   inc parentesisAbiertos
+terminar:
+   ret
+   verificarParentesis ENDP
    
 end Begin
