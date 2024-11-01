@@ -189,36 +189,57 @@ cerrar:
    
    verificarNumero PROC; el numero a verificar ocupa estar en al
    cmp al, 1
-   je siEs
+   je siEsN
    cmp al, 2
-   je siEs
+   je siEsN
    cmp al, 3
-   je siEs
+   je siEsN
    cmp al, 4
-   je siEs
+   je siEsN
    cmp al, 5
-   je siEs
+   je siEsN
    cmp al, 6
-   je siEs
+   je siEsN
    cmp al, 7
-   je siEs
+   je siEsN
    cmp al, 8
-   je siEs
+   je siEsN
    cmp al, 9
-   je siEs
+   je siEsN
    cmp al, 10
-   je siEs
-   jmp noEs
+   je siEsN
+   jmp noEsN
    
-siEs:
+siEsN:
    mov bl, 1
    ret
    
-noEs:
+noEsN:
    mov bl, 0
    ret
    
    verificarNumero ENDP
+   
+   verificarOperador PROC; el char a verificar ocupa estar en al
+   cmp al, '+'
+   je siEsO
+   cmp al, '*'
+   je siEsO
+   cmp al, '/'
+   je siEsO
+   cmp al, '-'
+   je siEsO
+   jmp noEsO
+   
+siEsO:
+   mov bl, 1
+   ret
+   
+noEsO:
+   mov bl, 0
+   ret
+   
+   verificarOperador ENDP
    
    shuntingYard PROC
    call compararParentesisIguales
