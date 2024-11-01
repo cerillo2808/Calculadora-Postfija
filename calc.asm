@@ -4,6 +4,7 @@
                                            
 .DATA                                                               
   entrada DB 25 DUP(20H); la entrada es de maximo 25 chars
+  guardarRespuesta DB 9 DUP(0H)
   peticion DB "Ingrese la expresion a calcular: "
   respuesta DB "Resultado: "
   fila DB ?
@@ -65,9 +66,8 @@ analizarEntrada:
     mov si, offset respuesta
     mov di, 1824; posicion de la hilera en pantalla
     call imprimirString
-    
-    mov bl, resultado
-    call imprimirChar
+    mov resultado, 255
+    call imprimirResultado
     
    
    getch PROC    NEAR                        
@@ -98,6 +98,26 @@ analizarEntrada:
    stosw
    RET
    imprimirChar ENDP
+   
+   imprimirResultado PROC
+    mov al, resultado
+    mov cx, 9
+    mov si, 0
+    formatearNumeros:
+    aam
+    mov guardarRespuesta[si], al
+    mov al, ah
+    INC si
+    loop formatearNumeros
+    mov cx, 9
+    mov si, 8
+    imprimirUno:
+    mov bl, guardarRespuesta[si]
+    call imprimirChar
+    DEC si
+    loop imprimirUno
+    RET
+   imprimirResultado ENDP
    
    imprimirString PROC
     mov ah, 07                  
