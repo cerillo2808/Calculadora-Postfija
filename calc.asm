@@ -12,6 +12,9 @@
   parentesisAbiertos DB 0H
   parentesisCerrados DB 0H
   resultado DB 0H
+  shunting DB 25 DUP(20H); las operaciones ordenadas
+  operadores DB 25 DUP(20H)
+  numeros DB 25 DUP(20H)
   
 .CODE                                      
                                            
@@ -168,5 +171,62 @@ esParentesisAbierto:
 terminar:
    ret
    verificarParentesis ENDP
+   
+   compararParentesisIguales PROC
+   mov bl, parentesisCerrados
+   cmp bl, parentesisAbiertos
+   je esIgual
+   jmp cerrar
+esIgual:
+   mov al, 1
+cerrar:
+   ret
+   compararParentesisIguales ENDP
+   
+   verificarNumero PROC; el numero a verificar ocupa estar en al
+   cmp al, 1
+   je siEs
+   cmp al, 2
+   je siEs
+   cmp al, 3
+   je siEs
+   cmp al, 4
+   je siEs
+   cmp al, 5
+   je siEs
+   cmp al, 6
+   je siEs
+   cmp al, 7
+   je siEs
+   cmp al, 8
+   je siEs
+   cmp al, 9
+   je siEs
+   cmp al, 10
+   je siEs
+   jmp noEs
+   
+siEs:
+   mov bl, 1
+   ret
+   
+noEs:
+   mov bl, 0
+   ret
+   
+   verificarNumero ENDP
+   
+   shuntingYard PROC
+   call compararParentesisIguales
+   ; TO-DO: manejar que no sean
+   mov cx, 25
+   ;shunting:
+   ;call verificarNumero
+   ;loop shunting
+   ret
+   shuntingYard ENDP
+   
+   
+   
    
 end Begin
