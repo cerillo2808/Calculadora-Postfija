@@ -176,9 +176,13 @@ terminar:
    mov bl, parentesisCerrados
    cmp bl, parentesisAbiertos
    je esIgual
-   jmp cerrar
+   jmp noEsIgual
 esIgual:
    mov al, 1
+   jmp cerrar
+noEsIgual:
+   mov al, 0
+   jmp cerrar; instruccion redundante
 cerrar:
    ret
    compararParentesisIguales ENDP
@@ -218,11 +222,20 @@ noEs:
    
    shuntingYard PROC
    call compararParentesisIguales
-   ; TO-DO: manejar que no sean
+   cmp al, 1
+   jne tirarError
+   
    mov cx, 25
-   ;shunting:
-   ;call verificarNumero
-   ;loop shunting
+   mov si, 0
+ordenar:
+   call verificarNumero
+   ;TO-DO comparacion de al
+   inc si
+   ;TO-DO recorrer la entrada
+   loop ordenar
+   
+tirarError:
+   ;manejar error con un bool
    ret
    shuntingYard ENDP
    
