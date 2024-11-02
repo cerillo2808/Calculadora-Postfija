@@ -230,24 +230,26 @@ noEsNumero:
    verificarNumero ENDP
    
    verificarOperador PROC; el char a verificar ocupa estar en al
+   add al, 30H; convertirlo a ASCII de nuevo para compararlo
    cmp al, '+'
    je siEsOperador
    cmp al, '*'
    je siEsOperador
    cmp al, '/'
    je siEsOperador
-   cmp al, '-'
-   je siEsOperador
    jmp noEsOperador
    
 siEsOperador:
    mov bl, 1
-   ret
+   jmp convertirBin
    
 noEsOperador:
    mov bl, 0
-   ret
+   jmp convertirBin
    
+convertirBin:
+   add al, -30H
+   ret
    verificarOperador ENDP
    
    shuntingYard PROC
