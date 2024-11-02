@@ -197,32 +197,32 @@ cerrar:
    
    verificarNumero PROC; el numero a verificar ocupa estar en al
    cmp al, 1
-   je siEsN
+   je siEsNumero
    cmp al, 2
-   je siEsN
+   je siEsNumero
    cmp al, 3
-   je siEsN
+   je siEsNumero
    cmp al, 4
-   je siEsN
+   je siEsNumero
    cmp al, 5
-   je siEsN
+   je siEsNumero
    cmp al, 6
-   je siEsN
+   je siEsNumero
    cmp al, 7
-   je siEsN
+   je siEsNumero
    cmp al, 8
-   je siEsN
+   je siEsNumero
    cmp al, 9
-   je siEsN
+   je siEsNumero
    cmp al, 0
-   je siEsN
-   jmp noEsN
+   je siEsNumero
+   jmp noEsNumero
    
-siEsN:
+siEsNumero:
    mov bl, 1
    ret
    
-noEsN:
+noEsNumero:
    mov bl, 0
    ret
    
@@ -230,20 +230,20 @@ noEsN:
    
    verificarOperador PROC; el char a verificar ocupa estar en al
    cmp al, '+'
-   je siEsO
+   je siEsOperador
    cmp al, '*'
-   je siEsO
+   je siEsOperador
    cmp al, '/'
-   je siEsO
+   je siEsOperador
    cmp al, '-'
-   je siEsO
-   jmp noEsO
+   je siEsOperador
+   jmp noEsOperador
    
-siEsO:
+siEsOperador:
    mov bl, 1
    ret
    
-noEsO:
+noEsOperador:
    mov bl, 0
    ret
    
