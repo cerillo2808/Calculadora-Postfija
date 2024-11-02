@@ -88,10 +88,6 @@ getch PROC NEAR
     RET                                                                      
 getch ENDP
 
-salir PROC
-    .EXIT
-    RET
-salir ENDP
 leer PROC
     mov cx, 25 ; pide 25 chars
     mov si, 0 ; indice del vector de los n?meros inicializado en 0
@@ -272,5 +268,8 @@ tirarError:
     ; manejar error con un bool
     ret
 shuntingYard ENDP
-   
+
+salir:
+    .EXIT
+
 end Begin
