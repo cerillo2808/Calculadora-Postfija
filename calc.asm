@@ -14,7 +14,7 @@ INCLUDE macro.asm
   parentesisAbiertos DB 0H
   parentesisCerrados DB 0H
   resultado DB 0H
-  shunting DB 5, '+',6, 22 DUP(20H); las operaciones ordenadas
+  shunting DB 5, '+',6,'*',2,20 DUP(20H); las operaciones ordenadas
   operando1 DB 0
   operando2 DB 0
   operador DB 0

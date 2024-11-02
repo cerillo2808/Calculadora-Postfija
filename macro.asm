@@ -1,3 +1,48 @@
+;Guarda registros en pila cierto orden
+guardarRegistros MACRO reg1, reg2, reg3, reg4, reg5, reg6
+    IFNB<reg1>
+        PUSH reg1
+    ENDIF
+    IFNB<reg2>
+        PUSH reg2
+    ENDIF
+    IFNB<reg3>
+        PUSH reg3
+    ENDIF
+    IFNB<reg4>
+        PUSH reg4
+    ENDIF
+    IFNB<reg5>
+        PUSH reg5
+    ENDIF
+    IFNB<reg6>
+        PUSH reg6
+    ENDIF
+    ENDM
+
+;Restaura registros de la pila (puestos en orden inverso)
+restaurarRegistros MACRO reg1, reg2, reg3, reg4, reg5, reg6
+    IFNB<reg1>
+        POP reg1
+    ENDIF
+    IFNB<reg2>
+        POP reg2
+    ENDIF
+    IFNB<reg3>
+        POP reg3
+    ENDIF
+    IFNB<reg4>
+        POP reg4
+    ENDIF
+    IFNB<reg5>
+        POP reg5
+    ENDIF
+    IFNB<reg6>
+        POP reg6
+    ENDIF
+    ENDM
+    
+
 operacion macro ope1, ope2, operador
     cmp operador, '+'
     je sumar
