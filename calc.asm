@@ -15,6 +15,7 @@
   shunting DB 25 DUP(20H); las operaciones ordenadas
   operadores DB 25 DUP(20H)
   numeros DB 25 DUP(20H)
+  longitudEntrada DB 0H
   
 .CODE                                      
                                            
@@ -167,9 +168,9 @@ print:
    multiplicacion ENDP
    
    verificarParentesis PROC
-   cmp bl, '('; es igual a (, 28H
+   cmp bl, '('
    je esParentesisAbierto
-   cmp bl, ')'; es igual a ), 29H
+   cmp bl, ')'
    jne terminar
    inc parentesisCerrados
    jmp terminar
