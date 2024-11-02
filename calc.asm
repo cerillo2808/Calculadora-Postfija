@@ -69,8 +69,16 @@ analizarEntrada:
     mov si, offset respuesta
     mov di, 1824; posicion de la hilera en pantalla
     call imprimirString
-    mov resultado, 255
+    
+    mov al, entrada[0]
+    call verificarOperador
+    
+    mov resultado, bl
     call imprimirResultado
+    
+    
+    
+    .EXIT
     
    
    getch PROC    NEAR                        
@@ -206,7 +214,7 @@ cerrar:
    je siEsN
    cmp al, 9
    je siEsN
-   cmp al, 10
+   cmp al, 0
    je siEsN
    jmp noEsN
    
