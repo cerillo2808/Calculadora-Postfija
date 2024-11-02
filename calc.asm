@@ -14,7 +14,7 @@ INCLUDE macro.asm
   parentesisAbiertos DB 0H
   parentesisCerrados DB 0H
   resultado DB 0H
-  shunting DB 25 DUP(20H); las operaciones ordenadas
+  shunting DB 5, '+',6, 22 DUP(20H); las operaciones ordenadas
   operando1 DB 0
   operando2 DB 0
   operador DB 0
@@ -74,9 +74,8 @@ analizarEntrada:
     mov si, offset respuesta
     mov di, 1824; posicion de la hilera en pantalla
     call imprimirString
-    mov resultado, 255
+    calcularM shunting, operando1, operando2, operador, resultado
     call imprimirResultado
-    
    
    getch PROC    NEAR                        
         MOV     AH,10H                                          
@@ -265,25 +264,6 @@ tirarError:
    ret
    shuntingYard ENDP
    
-calcular PROC
-    mov cx, 25
-    mov si, 1
-    mov resultado, 0
-hacerCalculo:
-    mov al, [shunting]
-    mov operando1, al
-    mov al, [shunting + si + 1]
-    mov operando2, al
-    mov al, [shunting + si]
-    mov operador, al
-    operacion operando1, operando2, operador
-    mov al, operando1
-    mov [shunting], al
-    add si, 2
-    loop hacerCalculo
-    mov resultado, al
-    ret
-calcular ENDP
   
    
    

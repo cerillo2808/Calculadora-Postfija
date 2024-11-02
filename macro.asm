@@ -39,7 +39,7 @@ multiplicar:
 fin:
 endm
 
-calcularM macro vector, op1, op2, operador
+calcularM macro vector, op1, op2, operador, resultado
     mov cx, 25
     mov si, 1
     mov al, 0 ;va a almacenar el resultado final
@@ -51,7 +51,9 @@ calcularM macro vector, op1, op2, operador
     mov al, [vector + si]
     mov operador, al
     operacion op1, op2, operador
+    mov al, op1
     mov [vector], al
     add si, 2
     loop hacerCalculo
+    mov resultado, al
 endm
