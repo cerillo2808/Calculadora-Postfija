@@ -1,3 +1,5 @@
+INCLUDE macro.asm
+
 .model small                               
 .STACK 512
 .586                                 
@@ -12,9 +14,15 @@
   parentesisAbiertos DB 0H
   parentesisCerrados DB 0H
   resultado DB 0H
+  shunting DB 25 DUP(20H); las operaciones ordenadas
+  operando1 DB 0
+  operando2 DB 0
+  operador DB 0
+  operadores DB 25 DUP(20H)
+  numeros DB 25 DUP(20H)
   
-.CODE                                      
-                                           
+.CODE
+
 Begin:                                     
     mov ax, @data     
     mov ds, ax                                           
@@ -168,5 +176,115 @@ esParentesisAbierto:
 terminar:
    ret
    verificarParentesis ENDP
+   
+   compararParentesisIguales PROC
+   mov bl, parentesisCerrados
+   cmp bl, parentesisAbiertos
+   je esIgual
+   jmp noEsIgual
+esIgual:
+   mov al, 1
+   jmp cerrar
+noEsIgual:
+   mov al, 0
+   jmp cerrar; instruccion redundante
+cerrar:
+   ret
+   compararParentesisIguales ENDP
+   
+   verificarNumero PROC; el numero a verificar ocupa estar en al
+   cmp al, 1
+   je siEsN
+   cmp al, 2
+   je siEsN
+   cmp al, 3
+   je siEsN
+   cmp al, 4
+   je siEsN
+   cmp al, 5
+   je siEsN
+   cmp al, 6
+   je siEsN
+   cmp al, 7
+   je siEsN
+   cmp al, 8
+   je siEsN
+   cmp al, 9
+   je siEsN
+   cmp al, 10
+   je siEsN
+   jmp noEsN
+   
+siEsN:
+   mov bl, 1
+   ret
+   
+noEsN:
+   mov bl, 0
+   ret
+   
+   verificarNumero ENDP
+   
+   verificarOperador PROC; el char a verificar ocupa estar en al
+   cmp al, '+'
+   je siEsO
+   cmp al, '*'
+   je siEsO
+   cmp al, '/'
+   je siEsO
+   cmp al, '-'
+   je siEsO
+   jmp noEsO
+   
+siEsO:
+   mov bl, 1
+   ret
+   
+noEsO:
+   mov bl, 0
+   ret
+   
+   verificarOperador ENDP
+   
+   shuntingYard PROC
+   call compararParentesisIguales
+   cmp al, 1
+   jne tirarError
+   
+   mov cx, 25
+   mov si, 0
+ordenar:
+   call verificarNumero
+   ;TO-DO comparacion de al
+   inc si
+   ;TO-DO recorrer la entrada
+   loop ordenar
+   
+tirarError:
+   ;manejar error con un bool
+   ret
+   shuntingYard ENDP
+   
+calcular PROC
+    mov cx, 25
+    mov si, 1
+    mov resultado, 0
+hacerCalculo:
+    mov al, [shunting]
+    mov operando1, al
+    mov al, [shunting + si + 1]
+    mov operando2, al
+    mov al, [shunting + si]
+    mov operador, al
+    operacion operando1, operando2, operador
+    mov al, operando1
+    mov [shunting], al
+    add si, 2
+    loop hacerCalculo
+    mov resultado, al
+    ret
+calcular ENDP
+  
+   
    
 end Begin
