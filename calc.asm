@@ -11,6 +11,8 @@ INCLUDE macro.asm
   guardarRespuesta DB 9 DUP(0H)
   peticion DB "Ingrese la expresion a calcular: "
   respuesta DB "Resultado: "
+  instrucciones DB "Ingrese Enter para calcular. Ingrese X para salir."; 50 chars
+  nuevaPeticion DB "Ingrese cualquier tecla para volver a calcular."; 48 chars
   fila DB ?; para imprimir en pantalla
   columna DB ?; para imprimir en pantalla
   parentesisAbiertos DB 0H; cantidad total
@@ -33,11 +35,28 @@ Begin:
     cld                                
     mov ax,0B800H                  
     mov es,ax  
+    
+    mov cx, 50
+    mov si, offset instrucciones
+    mov di, 1300
+    call imprimirString
               
     mov cx, 32; la hilera es de 32 chars          
     mov si, offset peticion
     mov di, 1620; posicion de la hilera en pantalla        
     call imprimirString
+    
+    ;incializar contadores en 0 para soportar mas calculos
+    mov tamanoEntrada, 0
+    mov parentesisAbiertos, 0
+    mov parentesisCerrados, 0
+    mov resultado, 0
+    mov operando1, 0
+    mov operando2, 0
+    mov operador, 0
+    mov tamanoSubexpresion, 0
+    mov numeroAnterior, 0
+    mov resultadoSubexpresion, 0
     
     mov cx, 25
     mov si, 0
@@ -89,8 +108,16 @@ analizarEntrada:
     
     
     ;calcularM shunting, operando1, operando2, operador, resultado
-    ;call imprimirResultado
-    jmp leerEntrada ; Volver a leer entrada despu?s de analizar
+    call imprimirResultado
+    
+    mov cx, 47
+    mov si, offset nuevaPeticion
+    mov di, 1940
+    call imprimirString
+    call getch
+    call clearScreen
+    
+    jmp Begin ; Volver a leer entrada despu?s de analizar
     
 retroceder:
     dec columna
@@ -109,6 +136,15 @@ retroceder:
     int 10h                                   
     RET                                       
     clearCursor ENDP
+    
+    clearScreen PROC
+    mov ax, 0600h                             
+        mov bh, 07h                               
+        mov cx, 0000h                             
+        mov dx, 184Fh                             
+        int 10h                                   
+        RET
+    clearScreen ENDP
 
 getch PROC NEAR                        
     MOV AH,10H                                          
@@ -284,6 +320,9 @@ ordenar PROC
     cmp al, 0; si retorna 0 significa que no son iguales
     je tirarError
     
+    cmp tamanoEntrada, 3
+    je directo
+    
     ;verificar si hay parentesis o no
     cmp parentesisAbiertos, 0
     je noHayParentesis
@@ -291,6 +330,11 @@ ordenar PROC
     
 noHayParentesis:
     call calcular
+    jmp finOrdenar
+    
+directo:
+    calcularM entrada, operando1, operando2, operador, resultado
+    mov resultado, al
     jmp finOrdenar
    
 tirarError:
