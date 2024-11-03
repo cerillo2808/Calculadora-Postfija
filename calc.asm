@@ -105,7 +105,8 @@ analizarEntrada:
     mov di, 1824 ; posicion de la hilera en pantalla
     call imprimirString
     
-    
+    mov bl, tamanoEntrada
+    call imprimirChar
     
     ;calcularM shunting, operando1, operando2, operador, resultado
     call imprimirResultado
@@ -333,7 +334,7 @@ noHayParentesis:
     jmp finOrdenar
     
 directo:
-    calcularM entrada, operando1, operando2, operador, resultado
+    calcularM subexpresion, operando1, operando2, operador, resultado
     mov resultado, al
     jmp finOrdenar
    
@@ -379,7 +380,7 @@ llamarMacro PROC
     mov subexpresion[1], dl; operando con prioridad
     mov dl, entrada[si+2]
     mov subexpresion[2], dl; segundo numero
-    calcularM subexpresion, operando1, operando2, operador, resultado
+    ;calcularM subexpresion, operando1, operando2, operador, resultado
     ret
 llamarMacro ENDP
 
