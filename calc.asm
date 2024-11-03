@@ -7,6 +7,7 @@ INCLUDE macro.asm
                                            
 .DATA                                                               
   entrada DB 25 DUP(20H); la entrada es de maximo 25 chars
+  tamanoEntrada DB 0H
   guardarRespuesta DB 9 DUP(0H)
   peticion DB "Ingrese la expresion a calcular: "
   respuesta DB "Resultado: "
@@ -15,17 +16,13 @@ INCLUDE macro.asm
   parentesisAbiertos DB 0H; cantidad total
   parentesisCerrados DB 0H; cantidad total
   resultado DB 0H; resultado final
-  shunting DB 25 DUP(20H); las operaciones ordenadas
   operando1 DB 0
   operando2 DB 0
   operador DB 0
-  operadores DB 25 DUP(20H); a utilizarse como pila
-  numeros DB 25 DUP(20H); a utilizarse como pila
-  tamanoOperadores DW 0; a utilizarse como indice de la pila
-  tamanoNumeros DW 0; a utilizarse como indice de la pila
-  tamanoShunting DW 0; a utilizarse como indice de la pila
-  subexpresion DB 25 DUP (20H)
-  recorrido DW 0
+  subexpresion DB 25 DUP(20H)
+  tamanoSubexpresion DB 0H
+  numeroAnterior DB 0H
+  resultadoSubexpresion DB 0H
   
   
 .CODE
@@ -57,12 +54,15 @@ leerEntrada:
     je salir
     cmp al, 'x'
     je salir
+    cmp al, 08; igual a backspace
+    je retroceder
     cmp al, 0DH ; igual a enter
     je analizarEntrada
     
     add al, -30H ; cambiar de ascii a binario
     
     mov entrada[si], al ; guardar la entrada en el vector
+    inc tamanoEntrada
     
     mov ah, 07 ; comando para imprimir
     mov di, 1684 ; posicion
@@ -91,6 +91,24 @@ analizarEntrada:
     ;calcularM shunting, operando1, operando2, operador, resultado
     ;call imprimirResultado
     jmp leerEntrada ; Volver a leer entrada despu?s de analizar
+    
+retroceder:
+    dec columna
+    dec si
+    dec tamanoEntrada
+    call clearCursor
+    call ponerCursor
+    jmp leerEntrada
+    
+    clearCursor PROC                                  
+    mov ax, 0600h                             
+    mov bh, 07h                               
+    mov cx, 0A2Bh
+    add cx, si
+    mov dx, cx                             
+    int 10h                                   
+    RET                                       
+    clearCursor ENDP
 
 getch PROC NEAR                        
     MOV AH,10H                                          
@@ -259,23 +277,67 @@ noEsOperador:
    
 verificarOperador ENDP
 
-moverAShunting PROC
-    mov si, tamanoShunting
-    mov al, shunting[si]
-    inc tamanoShunting
-moverAShunting ENDP
 
-moverANumeros PROC
-    mov si, tamanoNumeros
-    mov al, numeros[si]
-    inc tamanoNumeros
-    moverANumeros ENDP
+ordenar PROC
+    ;verificar si tiene la misma cantidad de parentesis abiertos que cerrados
+    call compararParentesisIguales
+    cmp al, 0; si retorna 0 significa que no son iguales
+    je tirarError
+    
+    ;verificar si hay parentesis o no
+    cmp parentesisAbiertos, 0
+    je noHayParentesis
+    ;to-do algo para continuar
+    
+noHayParentesis:
+    call calcular
+    jmp finOrdenar
+   
+tirarError:
+    ;TO-DO un booleano para el mensaje
+    
+finOrdenar:
+    ret
+ordenar ENDP
 
-moverAOperadores PROC
-    mov si, tamanoOperadores
-    mov al, operadores[si]
-    inc tamanoOperadores
-moverAOperadores ENDP
+calcular PROC
+    mov cx, 10
+    mov si, 1
+recorrerEntrada:
+    mov dl, entrada[si-1]
+    mov numeroAnterior, dl
+    mov al, entrada[si]
+    call prioridad
+    mov bl, al; prioridad de actual en bl
+    mov al, entrada[si+2]; proximo operador
+    call prioridad
+    cmp bl, al
+    jge esMayorIgual; se realiza la operacion
+    jmp seguir
+    
+esMayorIgual:
+    call llamarMacro
+    add resultado, al; se va a acumulando el resultado
+    jmp salirCalculo
+    
+seguir:
+    add si, 2
+    loop recorrerEntrada
+    
+salirCalculo:
+    ret
+    calcular ENDP
+    
+llamarMacro PROC
+    mov dl, numeroAnterior
+    mov subexpresion[0], dl; primer numero
+    mov dl, entrada[si]
+    mov subexpresion[1], dl; operando con prioridad
+    mov dl, entrada[si+2]
+    mov subexpresion[2], dl; segundo numero
+    calcularM subexpresion, operando1, operando2, operador, resultado
+    ret
+llamarMacro ENDP
 
 prioridad PROC
    add al, 30H; convertirlo a ASCII
@@ -288,121 +350,6 @@ baja:
 salirPrioridad:
    ret
    prioridad ENDP
-   
-desencadenarParentesis PROC
-
-buscarCierre:
-    mov si, tamanoOperadores
-    ;mov subexpresion[si], operadores[si]
-    ;TO-DO
-    
-    ret
-    desencadenarParentesis ENDP
-    
-tratarOperador PROC
-   cmp tamanoOperadores, 0
-   je vacio
-   ;si no esta vacio hay que ver si el anterior tiene mas prioridad o no
-   call prioridad
-   mov bl, al; para preservar la prioridad del actual operador
-   mov recorrido, si
-   mov si, tamanoOperadores
-   dec si
-   mov al, operadores[si]
-   mov si, recorrido
-   call prioridad
-   cmp bl, al
-   jg mayorPrioridad; actual operador es mayor, va a la pila
-   ; si el actual operador es menor, las operaciones anteriores ocupan ser resueltas
-   ; TO-DO
-   
-mayorPrioridad:
-   mov al, entrada[si]
-   mov recorrido, si
-   call moverAOperadores
-   mov si, recorrido
-   jmp finOperador
-   
-   ;si operadores no anda vacío
-    ;si el anterior es menor, va directo
-    ;si el anterior es mayor, guarda al presente, usa pone en shunting el numero, operador, numero, y luego pone presente en operadores
-   
-vacio:
-   mov recorrido, si
-   call moverAOperadores
-   mov si, recorrido
-   jmp finOperador
-   
-finOperador:
-   ret
-   tratarOperador ENDP
-   
-shuntingYard PROC
-    call compararParentesisIguales
-    cmp al, 0; si retorna 0 significa que no son iguales
-    je tirarError
-   
-    mov cx, 25
-    mov si, 0
-    
-ordenar:
-    
-   mov al, entrada[si]
-    
-   call verificarNumero
-   cmp bl, 1
-   je esNumero
-   
-   call verificarOperador
-   cmp bl, 1
-   je esOperador
-   
-   cmp al, '('
-   je parentesisAbierto
-   
-   cmp al, ')'
-   je parentesisCerrado
-   
-   jmp continuar; ignora espacios
-   
-esNumero:
-   mov recorrido, si
-   call moverANumeros
-   mov si, recorrido
-   jmp continuar
-   
-esOperador:
-   call tratarOperador
-   jmp continuar
-   
-parentesisAbierto:
-   mov al, entrada[si]
-   mov recorrido, si
-   call moverAOperadores
-   mov si, recorrido
-   jmp continuar
-   
-parentesisCerrado:
-   ;mover todo hasta el parentesis cerrado y llamar macro
-   ;mover resultado a numeros
-   mov recorrido, si
-   call desencadenarParentesis
-   mov si, recorrido
-   ;call macro
-   ;mover resultado a numero
-   jmp continuar
-   
-continuar:
-   inc si
-   loop ordenar
-   
-tirarError:
-    ; TO-DO manejar error con un bool
-    
-finShunting:
-    ret
-shuntingYard ENDP
-
 
 
 salir:
