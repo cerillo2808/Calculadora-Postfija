@@ -7,7 +7,7 @@ INCLUDE macro.asm
                                            
 .DATA                                                               
   entrada DB 25 DUP(20H); la entrada es de maximo 25 chars
-  tamanoEntrada DB 0H
+  tamanoEntrada DW 0H
   guardarRespuesta DB 9 DUP(0H)
   peticion DB "Ingrese la expresion a calcular: "
   respuesta DB "Resultado: "
@@ -21,10 +21,11 @@ INCLUDE macro.asm
   operando1 DB 0
   operando2 DB 0
   operador DB 0
-  subexpresion DB 25 DUP(20H)
-  tamanoSubexpresion DB 0H
-  numeroAnterior DB 0H
-  resultadoSubexpresion DB 0H
+  expresionPostfija DB 25 DUP(20H)
+  tamanoSubexpresion DW 0H
+  tamanoPila DW 0H
+  recorrido DW 0H
+  direccionOrdenar DB ?
   
   
 .CODE
@@ -55,8 +56,6 @@ Begin:
     mov operando2, 0
     mov operador, 0
     mov tamanoSubexpresion, 0
-    mov numeroAnterior, 0
-    mov resultadoSubexpresion, 0
     
     mov cx, 25
     mov si, 0
@@ -105,11 +104,12 @@ analizarEntrada:
     mov di, 1824 ; posicion de la hilera en pantalla
     call imprimirString
     
-    mov bl, tamanoEntrada
-    call imprimirChar
-    
     ;calcularM shunting, operando1, operando2, operador, resultado
-    call imprimirResultado
+    ;call imprimirResultado
+    
+    call ordenar
+devolverse:
+    call imprimirShunting
     
     mov cx, 47
     mov si, offset nuevaPeticion
@@ -127,6 +127,17 @@ retroceder:
     call clearCursor
     call ponerCursor
     jmp leerEntrada
+    
+    imprimirShunting PROC
+    mov cx, 25
+    mov si, 0
+imp:
+    mov bl, expresionPostfija[si]
+    call imprimirChar
+    inc si
+    loop imp
+    ret
+    imprimirShunting ENDP
     
     clearCursor PROC                                  
     mov ax, 0600h                             
@@ -256,7 +267,7 @@ esIgual:
     jmp cerrar
 noEsIgual:
     mov al, 0
-    jmp cerrar ; instrucci?n redundante
+    jmp cerrar ; instruccion redundante
 cerrar:
     ret
 compararParentesisIguales ENDP
@@ -314,87 +325,183 @@ noEsOperador:
    
 verificarOperador ENDP
 
-
-ordenar PROC
-    ;verificar si tiene la misma cantidad de parentesis abiertos que cerrados
-    call compararParentesisIguales
-    cmp al, 0; si retorna 0 significa que no son iguales
-    je tirarError
-    
-    cmp tamanoEntrada, 3
-    je directo
-    
-    ;verificar si hay parentesis o no
-    cmp parentesisAbiertos, 0
-    je noHayParentesis
-    ;to-do algo para continuar
-    
-noHayParentesis:
-    call calcular
-    jmp finOrdenar
-    
-directo:
-    calcularM subexpresion, operando1, operando2, operador, resultado
-    mov resultado, al
-    jmp finOrdenar
-   
-tirarError:
-    ;TO-DO un booleano para el mensaje
-    
-finOrdenar:
-    ret
-ordenar ENDP
-
-calcular PROC
-    mov cx, 10
-    mov si, 1
-recorrerEntrada:
-    mov dl, entrada[si-1]
-    mov numeroAnterior, dl
-    mov al, entrada[si]
-    call prioridad
-    mov bl, al; prioridad de actual en bl
-    mov al, entrada[si+2]; proximo operador
-    call prioridad
-    cmp bl, al
-    jge esMayorIgual; se realiza la operacion
-    jmp seguir
-    
-esMayorIgual:
-    call llamarMacro
-    add resultado, al; se va a acumulando el resultado
-    jmp salirCalculo
-    
-seguir:
-    add si, 2
-    loop recorrerEntrada
-    
-salirCalculo:
-    ret
-    calcular ENDP
-    
-llamarMacro PROC
-    mov dl, numeroAnterior
-    mov subexpresion[0], dl; primer numero
-    mov dl, entrada[si]
-    mov subexpresion[1], dl; operando con prioridad
-    mov dl, entrada[si+2]
-    mov subexpresion[2], dl; segundo numero
-    ;calcularM subexpresion, operando1, operando2, operador, resultado
-    ret
-llamarMacro ENDP
-
 prioridad PROC
-   add al, 30H; convertirlo a ASCII
-   cmp al, '+'
+   add bl, 30H; convertirlo a ASCII
+   cmp bl, '+'
    je baja
-   mov al, 2; cuando no es + es / o * que es de mas prioridad
+   cmp bl, '('
+   je muyBaja
+   mov bl, 2; cuando no es + es / o * que es de mas prioridad
    jmp salirPrioridad
 baja:
-   mov al, 1
+   mov bl, 1
+   jmp salirPrioridad
+muyBaja:
+   mov bl, 0
+   jmp salirPrioridad
 salirPrioridad:
    ret
    prioridad ENDP
+   
+   ponerEnExpresionPostfija PROC; lo que se pone es al
+   mov recorrido, si; preservar si del recorrido original
+   mov si, tamanoSubexpresion
+   call verificarNumero
+   cmp bl, 1
+   je moverlo
+   add al, -30H
+moverlo:
+   mov expresionPostfija[si], al
+   inc tamanoSubexpresion
+   mov si, recorrido; devolverlo
+   ret
+   ponerEnExpresionPostfija ENDP
+   
+   vaciarPila PROC
+   
+   cmp tamanoPila, 0
+   je salirVaciarPila
+   
+   mov cx, tamanoPila
+quitar:
+   pop bx
+   cmp bl, '('
+   je continuarQuitar
+   mov al, bl
+   call ponerEnExpresionPostfija
+continuarQuitar:
+   loop quitar
+   
+salirVaciarPila:
+   jmp devolverse
+   ret
+   vaciarPila ENDP
+   
+   desapilar PROC
+   
+comparar:
+   
+   mov dh, al; guardar la entrada que se esta leyendo
+   
+   cmp tamanoPila, 0
+   je salirDesapilar
+   
+   pop bx
+   push bx
+   call prioridad
+   cmp bl, dl
+   jl menor; si es menor es que es un parentesis
+   
+   pop bx
+   mov al, bl
+   call ponerEnExpresionPostfija
+   dec tamanoPila
+   jmp comparar; repetir hasta que se salga
+   
+menor:
+   jmp salirDesapilar
+   
+salirDesapilar:
+   mov al, dh; devolver a al la entrada
+   jmp meterAPila
+   ret
+   desapilar ENDP
+   
+   desapilarC PROC
+   
+compararC:
+   
+   mov dh, al; guardar la entrada que se esta leyendo
+   
+   cmp tamanoPila, 0
+   je salirDesapilarC
+   
+   pop bx
+   push bx
+   call prioridad
+   cmp bl, dl
+   jl menorC; si es menor es que es un parentesis
+   
+   pop bx
+   mov al, bl
+   call ponerEnExpresionPostfija
+   dec tamanoPila
+   jmp compararC; repetir hasta que se salga
+   
+menorC:
+   dec tamanoPila
+   jmp salirDesapilar
+   
+salirDesapilarC:
+   mov al, dh; devolver a al la entrada
+   pop bx; quito el parentesis
+   jmp continuar
+   ret
+   desapilarC ENDP
+   
+   ordenar PROC
+   mov cx, tamanoEntrada
+   mov si, 0
+recorrer:
+   mov al, entrada[si]
+   
+   call verificarNumero
+   cmp bl, 1
+   je esNumero
+   
+   call verificarOperador
+   cmp bl, 1
+   je esOperador
+   
+   cmp al, '('
+   je parentesisAbierto
+   
+   cmp al, ')'
+   je parentesisCerrado
+   
+   jmp continuar; ignora espacios en blanco
+   
+esNumero:
+   call ponerEnExpresionPostfija
+   jmp continuar
+   
+esOperador:
+   ;verificar si pila esta vacia
+   cmp tamanoPila, 0
+   mov bl, al
+   call prioridad
+   mov dl, bl
+   pop bx
+   push bx
+   call prioridad
+   cmp dl, bl
+   jge meterAPila; mayor igual que
+   call desapilar; cuando es menor que
+   jmp meterAPila
+   
+   jmp continuar
+   
+meterAPila:
+   push ax
+   inc tamanoPila
+   jmp continuar
+   
+parentesisAbierto:
+   call ponerEnExpresionPostfija
+   jmp continuar
+   
+parentesisCerrado:
+   call desapilarC; quita cosas hasta encontrar a (
+   jmp continuar
+   
+continuar:
+   inc si
+   loop recorrer
+   
+salirOrdenar:
+   call vaciarPila
+   ret
+   ordenar ENDP
 
 
 salir:
