@@ -214,7 +214,7 @@ imprimirString PROC
 print:                      
     lodsb               
     stosw               
-    loop print ; imprime la petici?n
+    loop print
         
     ret
 imprimirString ENDP
@@ -357,27 +357,48 @@ moverlo:
    ret
    ponerEnExpresionPostfija ENDP
    
-   vaciarPila PROC
+   ordenar PROC
+   mov cx, tamanoEntrada
+   mov si, 0
+recorrer:
+   mov al, entrada[si]
    
-   cmp tamanoPila, 0
-   je salirVaciarPila
+   call verificarNumero
+   cmp bl, 1
+   je esNumero
    
-   mov cx, tamanoPila
-quitar:
-   pop bx
-   cmp bl, '('
-   je continuarQuitar
-   mov al, bl
+   call verificarOperador
+   cmp bl, 1
+   je esOperador
+   
+   cmp al, '('
+   je parentesisAbierto
+   
+   cmp al, ')'
+   je parentesisCerrado
+
+   jmp continuar; ignora espacios en blanco
+   
+esNumero:
    call ponerEnExpresionPostfija
-continuarQuitar:
-   loop quitar
+   jmp continuar
    
-salirVaciarPila:
-   jmp devolverse
-   ret
-   vaciarPila ENDP
+saltoConejo:
+   loop recorrer
+   jmp salirOrdenar
    
-   desapilar PROC
+esOperador:
+   ;verificar si pila esta vacia
+   cmp tamanoPila, 0
+   mov bl, al
+   call prioridad
+   mov dl, bl
+   pop bx
+   push bx
+   call prioridad
+   cmp dl, bl
+   jge meterAPila; mayor igual que
+   ;cuando es menor hay que desapilarlo
    
 comparar:
    
@@ -404,12 +425,19 @@ menor:
 salirDesapilar:
    mov al, dh; devolver a al la entrada
    jmp meterAPila
-   ret
-   desapilar ENDP
    
-   desapilarC PROC
+meterAPila:
+   push ax
+   inc tamanoPila
+   jmp continuar
    
-compararC:
+parentesisAbierto:
+   call ponerEnExpresionPostfija
+   jmp continuar
+   
+parentesisCerrado:
+   ; quitar cosas hasta encontrar a (
+   compararC:
    
    mov dh, al; guardar la entrada que se esta leyendo
    
@@ -436,73 +464,31 @@ salirDesapilarC:
    mov al, dh; devolver a al la entrada
    pop bx; quito el parentesis
    jmp continuar
-   ret
-   desapilarC ENDP
-   
-   ordenar PROC
-   mov cx, tamanoEntrada
-   mov si, 0
-recorrer:
-   mov al, entrada[si]
-   
-   call verificarNumero
-   cmp bl, 1
-   je esNumero
-   
-   call verificarOperador
-   cmp bl, 1
-   je esOperador
-   
-   cmp al, '('
-   je parentesisAbierto
-   
-   cmp al, ')'
-   je parentesisCerrado
-   
-   jmp continuar; ignora espacios en blanco
-   
-esNumero:
-   call ponerEnExpresionPostfija
-   jmp continuar
-   
-esOperador:
-   ;verificar si pila esta vacia
-   cmp tamanoPila, 0
-   mov bl, al
-   call prioridad
-   mov dl, bl
-   pop bx
-   push bx
-   call prioridad
-   cmp dl, bl
-   jge meterAPila; mayor igual que
-   call desapilar; cuando es menor que
-   jmp meterAPila
-   
-   jmp continuar
-   
-meterAPila:
-   push ax
-   inc tamanoPila
-   jmp continuar
-   
-parentesisAbierto:
-   call ponerEnExpresionPostfija
-   jmp continuar
-   
-parentesisCerrado:
-   call desapilarC; quita cosas hasta encontrar a (
-   jmp continuar
    
 continuar:
    inc si
-   loop recorrer
+   ;loop recorrer
+   jmp saltoConejo
    
 salirOrdenar:
-   call vaciarPila
+   ;vaciar la pila
+   cmp tamanoPila, 0
+   je salirVaciarPila
+   
+   mov cx, tamanoPila
+quitar:
+   pop bx
+   cmp bl, '('
+   je continuarQuitar
+   mov al, bl
+   call ponerEnExpresionPostfija
+continuarQuitar:
+   loop quitar
+   
+salirVaciarPila:
+   jmp devolverse
    ret
    ordenar ENDP
-
 
 salir:
     .EXIT
