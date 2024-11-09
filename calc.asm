@@ -26,6 +26,7 @@ INCLUDE macro.asm
   tamanoPila DW 0H
   recorrido DW 0H
   direccionOrdenar DB ?
+  entradaActual DB 0H
   
   
 .CODE
@@ -102,7 +103,7 @@ analizarEntrada:
     mov cx, 11 ; la hilera es de 32 chars          
     mov si, offset respuesta
     mov di, 1824 ; posicion de la hilera en pantalla
-    call imprimirString
+    ;call imprimirString
     
     ;calcularM shunting, operando1, operando2, operador, resultado
     ;call imprimirResultado
@@ -316,10 +317,12 @@ verificarOperador PROC ; el char a verificar ocupa estar en al
     jmp noEsOperador
    
 siEsOperador:
+    add al, -30H
     mov bl, 1
     ret
    
 noEsOperador:
+    add al, -30H
     mov bl, 0
     ret
    
@@ -349,7 +352,6 @@ salirPrioridad:
    call verificarNumero
    cmp bl, 1
    je moverlo
-   add al, -30H
 moverlo:
    mov expresionPostfija[si], al
    inc tamanoSubexpresion
@@ -362,6 +364,7 @@ moverlo:
    mov si, 0
 recorrer:
    mov al, entrada[si]
+   mov entradaActual, al
    
    call verificarNumero
    cmp bl, 1
@@ -390,6 +393,7 @@ saltoConejo:
 esOperador:
    ;verificar si pila esta vacia
    cmp tamanoPila, 0
+   je meterAPila
    mov bl, al
    call prioridad
    mov dl, bl
@@ -397,8 +401,8 @@ esOperador:
    push bx
    call prioridad
    cmp dl, bl
-   jge meterAPila; mayor igual que
-   ;cuando es menor hay que desapilarlo
+   jg meterAPila; mayor que
+   ;cuando es menor o igual hay que desapilarlo
    
 comparar:
    
@@ -410,20 +414,19 @@ comparar:
    pop bx
    push bx
    call prioridad
-   cmp bl, dl
-   jl menor; si es menor es que es un parentesis
+   cmp bl, 0; si es parentesis cerrado
+   je salirDesapilar
+   cmp bl, dl; prioridad de la cima de la pila contra el simbolo actual
+   jl salirDesapilar; si es menor es que es un parentesis y se sale
    
    pop bx
    mov al, bl
    call ponerEnExpresionPostfija
    dec tamanoPila
-   jmp comparar; repetir hasta que se salga
-   
-menor:
-   jmp salirDesapilar
+   jmp comparar; repetir hasta que se salga, encuentre a un menor
    
 salirDesapilar:
-   mov al, dh; devolver a al la entrada
+   mov al, entradaActual; devolver a al la entrada
    jmp meterAPila
    
 meterAPila:
@@ -432,7 +435,7 @@ meterAPila:
    jmp continuar
    
 parentesisAbierto:
-   call ponerEnExpresionPostfija
+   jmp meterAPila
    jmp continuar
    
 parentesisCerrado:
