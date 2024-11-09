@@ -374,10 +374,10 @@ recorrer:
    cmp bl, 1
    je esOperador
    
-   cmp al, '('
+   cmp al, -8H; es ( en binario
    je parentesisAbierto
    
-   cmp al, ')'
+   cmp al, -7H; es ) en binario
    je parentesisCerrado
 
    jmp continuar; ignora espacios en blanco
@@ -440,9 +440,8 @@ parentesisAbierto:
    
 parentesisCerrado:
    ; quitar cosas hasta encontrar a (
-   compararC:
    
-   mov dh, al; guardar la entrada que se esta leyendo
+   compararC:
    
    cmp tamanoPila, 0
    je salirDesapilarC
@@ -450,22 +449,23 @@ parentesisCerrado:
    pop bx
    push bx
    call prioridad
-   cmp bl, dl
-   jl menorC; si es menor es que es un parentesis
+   cmp bl, 0; si es cero es (
+   je quitarParentesis
+   ;jl menorC; si es menor es que es un parentesis
    
    pop bx
+   dec tamanoPila
    mov al, bl
    call ponerEnExpresionPostfija
-   dec tamanoPila
    jmp compararC; repetir hasta que se salga
    
-menorC:
+quitarParentesis:
+   pop bx; quito el parentesis
    dec tamanoPila
-   jmp salirDesapilar
+   jmp salirDesapilarC
    
 salirDesapilarC:
-   mov al, dh; devolver a al la entrada
-   pop bx; quito el parentesis
+   mov al, entradaActual; devolver a al la entrada
    jmp continuar
    
 continuar:
@@ -481,7 +481,10 @@ salirOrdenar:
    mov cx, tamanoPila
 quitar:
    pop bx
-   cmp bl, '('
+   dec tamanoPila
+   cmp bl, -8H; ( en binario
+   je continuarQuitar
+   cmp bl, -7H; ) en binario
    je continuarQuitar
    mov al, bl
    call ponerEnExpresionPostfija
