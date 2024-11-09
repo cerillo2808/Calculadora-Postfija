@@ -14,7 +14,7 @@ INCLUDE macro.asm
   parentesisAbiertos DB 0H
   parentesisCerrados DB 0H
   resultado DB 0H
-  shunting DB 5, '+',6,'*',2,20 DUP(20H); las operaciones ordenadas
+  shunting DB 5,2,3,'*','+',2,'+',22 DUP(20H); las operaciones ordenadas
   operando1 DB 0
   operando2 DB 0
   operador DB 0
@@ -78,7 +78,7 @@ analizarEntrada:
     mov si, offset respuesta
     mov di, 1824 ; posicion de la hilera en pantalla
     call imprimirString
-    calcularM shunting, operando1, operando2, operador, resultado
+    call postfija
     call imprimirResultado
     jmp leerEntrada ; Volver a leer entrada despu?s de analizar
 
@@ -269,6 +269,42 @@ tirarError:
     ret
 shuntingYard ENDP
 
+postfija PROC
+    ;Se limpian los registros que se van a necesitar para realizar las operaciones
+    mov cx, 5
+    mov si, 0
+    loopGeneral:
+        mov al, shunting[si]
+        cmp al, '+'
+        je armarOperacion
+        cmp al, '*'
+        je armarOperacion
+        cmp al, '/'
+        je armarOperacion
+        cmp al, 20h
+        je saltar
+        continuar:
+            push ax
+            add si, 1
+        saltar:
+        loop loopGeneral
+    
+    pop ax
+    mov resultado, al
+    ret
+postfija ENDP
+
+    armarOperacion:
+        pop bx
+        pop dx
+        mov operando1, dl
+        mov operando2, bl
+        mov operador, al
+        operacion operando1, operando2, operador
+        mov al, operando1
+        jmp continuar
+        
+    
 salir:
     .EXIT
 
