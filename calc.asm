@@ -13,6 +13,8 @@ INCLUDE macro.asm
   respuesta DB "Resultado: "
   instrucciones DB "Ingrese Enter para calcular. Ingrese X para salir."; 50 chars
   nuevaPeticion DB "Ingrese cualquier tecla para volver a calcular."; 48 chars
+  errorParentesis DB "Error: parentesis no cierran correctamente"; 42 chars
+  errorChar DB "Error: caracter invalido"; 24 chars
   fila DB ?; para imprimir en pantalla
   columna DB ?; para imprimir en pantalla
   parentesisAbiertos DB 0H; cantidad total
@@ -57,6 +59,7 @@ Begin:
     mov operando2, 0
     mov operador, 0
     mov tamanoSubexpresion, 0
+    call limpiarVectorShunting
     
     mov cx, 25
     mov si, 0
@@ -100,18 +103,19 @@ leerEntrada:
     
 analizarEntrada:  
     
+    call verificarParentesisIguales
+    
+    call ordenar
+    ;call imprimirShunting
+    
     mov cx, 11 ; la hilera es de 32 chars          
     mov si, offset respuesta
     mov di, 1824 ; posicion de la hilera en pantalla
-    ;call imprimirString
+    call imprimirString
     
-    ;calcularM shunting, operando1, operando2, operador, resultado
-    ;call imprimirResultado
+    call imprimirResultado
     
-    call ordenar
-devolverse:
-    call imprimirShunting
-    
+salirDeCalculo:
     mov cx, 47
     mov si, offset nuevaPeticion
     mov di, 1940
@@ -139,6 +143,38 @@ imp:
     loop imp
     ret
     imprimirShunting ENDP
+    
+    verificarParentesisIguales PROC
+    mov al, parentesisCerrados
+    cmp al, parentesisAbiertos
+    je noHayProblema
+    mov cx, 42
+    mov si, offset errorParentesis
+    mov di, 1780
+    call imprimirString
+    jmp salirDeCalculo
+noHayProblema:
+    ret
+    verificarParentesisIguales ENDP
+    
+    imprimirErrorChar PROC
+    mov cx, 24
+    mov si, offset errorChar
+    mov di, 1780
+    call imprimirString
+    jmp salirDeCalculo
+    ret
+    imprimirErrorChar ENDP
+    
+    limpiarVectorShunting PROC
+    mov cx, 25
+    mov si, 0
+sobreescribir:
+    mov expresionPostfija[si], 20H
+    inc si
+    loop sobreescribir
+    ret
+    limpiarVectorShunting ENDP
     
     clearCursor PROC                                  
     mov ax, 0600h                             
@@ -379,7 +415,10 @@ recorrer:
    
    cmp al, -7H; es ) en binario
    je parentesisCerrado
-
+   
+   ; si llega hasta aqui es porque es un espacio en blanco u otro caracter
+   call imprimirErrorChar
+   
    jmp continuar; ignora espacios en blanco
    
 esNumero:
@@ -451,7 +490,6 @@ parentesisCerrado:
    call prioridad
    cmp bl, 0; si es cero es (
    je quitarParentesis
-   ;jl menorC; si es menor es que es un parentesis
    
    pop bx
    dec tamanoPila
@@ -492,7 +530,6 @@ continuarQuitar:
    loop quitar
    
 salirVaciarPila:
-   jmp devolverse
    ret
    ordenar ENDP
 
