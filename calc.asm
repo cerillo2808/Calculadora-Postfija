@@ -5,31 +5,36 @@ INCLUDE macro.asm
 .STACK 512
 .586                                 
                                            
-.DATA                                                               
+.DATA
+  ;vectores:                                                              
   entrada DB 25 DUP(20H); la entrada es de maximo 25 chars
+  expresionPostfija DB 25 DUP(20H); el vector ordenado por prioridad  
+  
+  ;contadores:
   tamanoEntrada DW 0H
-  guardarRespuesta DB 9 DUP(0H)
-  peticion DB "Ingrese la expresion a calcular: "
-  respuesta DB "Resultado: "
-  instrucciones DB "Ingrese Enter para calcular. Ingrese X para salir."; 50 chars
-  nuevaPeticion DB "Ingrese cualquier tecla para volver a calcular."; 48 chars
-  errorParentesis DB "Error: parentesis no cierran correctamente"; 42 chars
-  errorChar DB "Error: caracter invalido"; 24 chars
+  tamanoSubexpresion DW 0H
+  tamanoPila DW 0H
+  
+  ;variables
+  guardarRespuesta DB 9 DUP(0H); utilizada para formatear numeros
   fila DB ?; para imprimir en pantalla
   columna DB ?; para imprimir en pantalla
   parentesisAbiertos DB 0H; cantidad total
   parentesisCerrados DB 0H; cantidad total
+  recorrido DW 0H; usado para preservar el si de un loop
+  entradaActual DB 0H; usado para preservar la lectura actual de un loop
+  operando1 DB 0H
+  operando2 DB 0H
+  operador DB 0H
   resultado DB 0H; resultado final
-  operando1 DB 0
-  operando2 DB 0
-  operador DB 0
-  expresionPostfija DB 25 DUP(20H)
-  tamanoSubexpresion DW 0H
-  tamanoPila DW 0H
-  recorrido DW 0H
-  direccionOrdenar DB ?
-  entradaActual DB 0H
   
+  ;peticiones:
+  instrucciones DB "Ingrese Enter para calcular. Ingrese X para salir."; 50 chars
+  peticion DB "Ingrese la expresion a calcular: "; 32 chars
+  respuesta DB "Resultado: "; 11 chars
+  nuevaPeticion DB "Ingrese cualquier tecla para volver a calcular."; 48 chars
+  errorParentesis DB "Error: parentesis no cierran correctamente"; 42 chars
+  errorChar DB "Error: caracter invalido"; 24 chars
   
 .CODE
 
@@ -40,16 +45,16 @@ Begin:
     mov ax,0B800H                  
     mov es,ax  
     
-    mov cx, 50
+    mov cx, 50; la hilera es de  chars
     mov si, offset instrucciones
-    mov di, 1300
+    mov di, 1300; posicio de la hilera en pantalla
     call imprimirString
               
     mov cx, 32; la hilera es de 32 chars          
     mov si, offset peticion
     mov di, 1620; posicion de la hilera en pantalla        
     call imprimirString
-    
+
     ;incializar contadores en 0 para soportar mas calculos
     mov tamanoEntrada, 0
     mov parentesisAbiertos, 0
@@ -59,10 +64,13 @@ Begin:
     mov operando2, 0
     mov operador, 0
     mov tamanoSubexpresion, 0
-    call limpiarVectorShunting
+    mov entradaActual, 0
+    call limpiarVectorShunting; proc que sobreescribe todas las posiciones con espacio (20H)
     
-    mov cx, 25
+    ;recibir la entrada
+    mov cx, 25; la entrada es de maximo 25 caracteres
     mov si, 0
+    ;la fila y la columna ubican al cursor
     mov fila, 10
     mov columna, 43
     
@@ -70,50 +78,50 @@ leerEntrada:
     
     call ponerCursor
     
-    call getch
+    call getch; proc que lee un caracter
     
-    cmp al, 'X' ; Verificar si la tecla presionada es 'X'
+    cmp al, 'X'; Verificar si la tecla presionada es 'X'
     je salir
     cmp al, 'x'
     je salir
+    
     cmp al, 08; igual a backspace
     je retroceder
-    cmp al, 0DH ; igual a enter
+    
+    cmp al, 0DH; igual a enter
     je analizarEntrada
     
-    add al, -30H ; cambiar de ascii a binario
+    add al, -30H; cambiar de ascii a binario
     
-    mov entrada[si], al ; guardar la entrada en el vector
-    inc tamanoEntrada
+    mov entrada[si], al; guardar la entrada en el vector
     
-    mov ah, 07 ; comando para imprimir
-    mov di, 1684 ; posicion
-    inc si
+    inc tamanoEntrada; actualizar el contador
+    
+    mov ah, 07; comando para imprimir
+    mov di, 1684; posicion
+    inc si; se incrementa el si para que en la siguiente iteracion se guarde en la proxima posicion del vector
     mov ax, si
     mov bl, 2h
-    mul bl
-    add di, ax ; cambia la posici?n a [anterior+2]
-    mov bl, entrada[si-1] ; debido a que si ya fue incrementado, lo que quiero imprimir es el anterior
-    call imprimirChar
+    mul bl; multiplica al proximo SI por 2
+    add di, ax; cambia la posicion a [anterior+2], sirve para ubicar el char a imprimir
+    mov bl, entrada[si-1]; debido a que SI ya fue incrementado, lo que quiero imprimir es el anterior
+    call imprimirChar; se imprime lo que el usuario va poniendo
     call verificarParentesis
-    inc columna
+    inc columna; se mueve el cursor a la izquierda
     call ponerCursor
     
     loop leerEntrada
     
+    
 analizarEntrada:  
     
     call verificarParentesisIguales
-    
     call ordenar
-    
-    ;call imprimirShunting
-    
     call postfija
     
-    mov cx, 11 ; la hilera es de 32 chars          
+    mov cx, 11; la hilera es de 32 chars          
     mov si, offset respuesta
-    mov di, 1824 ; posicion de la hilera en pantalla
+    mov di, 1824; posicion de la hilera en pantalla
     call imprimirString
     
     call imprimirResultado
@@ -123,37 +131,30 @@ salirDeCalculo:
     mov si, offset nuevaPeticion
     mov di, 1940
     call imprimirString
-    call getch
+    call getch; esperar a que el usuario ingrese cualquier tecla para continuar
     call clearScreen
     
-    jmp Begin ; Volver a leer entrada despu?s de analizar
+    jmp Begin; Volver a leer entrada despues de analizar
     
 retroceder:
-    dec columna
-    dec si
-    dec tamanoEntrada
-    call clearCursor
-    call ponerCursor
-    jmp leerEntrada
+    dec columna; se actualiza la posicion del cursor
+    dec si; la entrada anterior se sobreescribe
+    dec tamanoEntrada; se actualiza el contador
+    call clearCursor; el char borrado se quita de pantalla
+    call ponerCursor; se pone el cursor en la posicion actualizada
+    jmp leerEntrada; se sigue leyendo
     
-    imprimirShunting PROC
-    mov cx, 25
-    mov si, 0
-imp:
-    mov bl, expresionPostfija[si]
-    call imprimirChar
-    inc si
-    loop imp
-    ret
-    imprimirShunting ENDP
+    ; Fin del flujo
+    
+    ; PROCS: 
     
     verificarParentesisIguales PROC
     mov al, parentesisCerrados
     cmp al, parentesisAbiertos
     je noHayProblema
-    mov cx, 42
+    mov cx, 42; la hilera es de 42 chars
     mov si, offset errorParentesis
-    mov di, 1780
+    mov di, 1780; posicion de la hilera en pantalla
     call imprimirString
     jmp salirDeCalculo
 noHayProblema:
@@ -161,93 +162,80 @@ noHayProblema:
     verificarParentesisIguales ENDP
     
     imprimirErrorChar PROC
-    mov cx, 24
+    mov cx, 24; la hilera es de 24 chars
     mov si, offset errorChar
-    mov di, 1780
+    mov di, 1780; posicion de la hilera en pantalla
     call imprimirString
     jmp salirDeCalculo
     ret
     imprimirErrorChar ENDP
     
     limpiarVectorShunting PROC
-    mov cx, 25
+    mov cx, 25; el vector es de 25 espacios
     mov si, 0
 sobreescribir:
-    mov expresionPostfija[si], 20H
+    mov expresionPostfija[si], 20H; se sobreescribe lo que sea que haya en el vector con espacio (20H)
     inc si
     loop sobreescribir
     ret
     limpiarVectorShunting ENDP
     
-    clearCursor PROC                                  
+    clearCursor PROC; limpia la posicion en la que esta el cursor                                  
     mov ax, 0600h                             
     mov bh, 07h                               
     mov cx, 0A2Bh
     add cx, si
     mov dx, cx                             
     int 10h                                   
-    RET                                       
+    ret                                       
     clearCursor ENDP
     
-    clearScreen PROC
+    clearScreen PROC; limpia toda la pantalla
     mov ax, 0600h                             
-        mov bh, 07h                               
-        mov cx, 0000h                             
-        mov dx, 184Fh                             
-        int 10h                                   
-        RET
+    mov bh, 07h                               
+    mov cx, 0000h                             
+    mov dx, 184Fh                             
+    int 10h                                   
+    ret
     clearScreen ENDP
 
-getch PROC NEAR                        
-    MOV AH,10H                                          
-    INT 16H                       
-    RET                                                                      
-getch ENDP
-
-leer PROC
-    mov cx, 25 ; pide 25 chars
-    mov si, 0 ; indice del vector de los n?meros inicializado en 0
-       
-leerChar:
-    call getch ; llama a lectura de un (1) caracter, retornado en al
-    add al, -30H ; cambia de ascii a bin
-    mov entrada[si], al ; guardamos el caracter le?do en el vector de entrada
-    INC si ; nos movemos a la siguiente posici?n
-    loop leerChar ; siguiente iteraci?n, la CPU ir? reduciendo el n?mero en cx hasta que llegue a 0
-         
-    RET
-leer ENDP
+    getch PROC NEAR; lee un caracter                        
+    mov ah,10h                                          
+    int 16h                       
+    ret                                                                      
+    getch ENDP
    
-imprimirChar PROC
-    add bl, 30H ; cambia de bin a ascii
-    mov AH, 07H
+    imprimirChar PROC; imrpime un solo char
+    add bl, 30H; cambia de bin a ascii
+    mov ah, 07H
     mov al, bl
     cld
     stosw
-    RET
-imprimirChar ENDP
+    ret
+    imprimirChar ENDP
    
-imprimirResultado PROC
+    imprimirResultado PROC
     mov al, resultado
-    mov cx, 9
+    mov cx, 4
     mov si, 0
 formatearNumeros:
-    aam
-    mov guardarRespuesta[si], al
-    mov al, ah
-    INC si
-    loop formatearNumeros
+    aam; descompone el resultado en sus numeros individuales
+    ; en al queda el menor numero
+    mov guardarRespuesta[si], al; guarda el numero individual
+    mov al, ah; se guarda el resto de los numeros
+    inc si
+    loop formatearNumeros; se repite hasta que ya no queden numeros
     mov cx, 9
     mov si, 8
 imprimirUno:
     mov bl, guardarRespuesta[si]
-    call imprimirChar
-    DEC si
+    call imprimirChar; imprime cada numero individual de la respuesta
+    dec si
     loop imprimirUno
-    RET
-imprimirResultado ENDP
+    ret
+    imprimirResultado ENDP
    
-imprimirString PROC
+    imprimirString PROC; ocupa de parametros la longitud y el offset de la hilera a imprimir
     mov ah, 07                  
     cld
     
@@ -257,62 +245,50 @@ print:
     loop print
         
     ret
-imprimirString ENDP
+    imprimirString ENDP
    
-ponerCursor PROC
-    mov ah, 02h ; comando para poner el cursor
+    ponerCursor PROC
+    mov ah, 02h; comando para poner el cursor
     mov bh, 00
     mov dh, fila
     mov dl, columna
     int 10h
     ret
-ponerCursor ENDP
+    ponerCursor ENDP
    
-suma PROC
-    add al, bl ; resultado queda en al
-    ret
-suma ENDP
-   
-division PROC ; hay que darle el dividendo a ax
-    div al ; resultado entero queda en al
-    ret
-division ENDP
-   
-multiplicacion PROC ; hay que darle el otro factor a al
-    mul bl ; resultado queda en al
-    ret
-multiplicacion ENDP
-   
-verificarParentesis PROC
+    verificarParentesis PROC
     cmp bl, '(' ; es igual a (, 28H
     je esParentesisAbierto
     cmp bl, ')' ; es igual a ), 29H
-    jne terminar
+    jne terminar; si no es abierto ni cerrado, se termina el proc
     inc parentesisCerrados
     jmp terminar
    
 esParentesisAbierto:
     inc parentesisAbiertos
+    
 terminar:
     ret
-verificarParentesis ENDP
+    verificarParentesis ENDP
    
-compararParentesisIguales PROC
+    compararParentesisIguales PROC
     mov bl, parentesisCerrados
-    cmp bl, parentesisAbiertos
+    cmp bl, parentesisAbiertos; Cerrados==Abiertos?
     je esIgual
     jmp noEsIgual
+    
 esIgual:
     mov al, 1
     jmp cerrar
+    
 noEsIgual:
     mov al, 0
-    jmp cerrar ; instruccion redundante
+    
 cerrar:
     ret
-compararParentesisIguales ENDP
+    compararParentesisIguales ENDP
    
-verificarNumero PROC ; el n?mero a verificar ocupa estar en al
+    verificarNumero PROC ; el numero a verificar ocupa estar en al
     cmp al, 1
     je siEsNumero
     cmp al, 2
@@ -343,9 +319,9 @@ noEsNumero:
     mov bl, 0
     ret
    
-verificarNumero ENDP
+    verificarNumero ENDP
    
-verificarOperador PROC ; el char a verificar ocupa estar en al
+    verificarOperador PROC ; el char a verificar ocupa estar en al
     add al, 30H; convertirlo a ASCII de nuevo para compararlo
     cmp al, '+'
     je siEsOperador
@@ -353,57 +329,58 @@ verificarOperador PROC ; el char a verificar ocupa estar en al
     je siEsOperador
     cmp al, '/'
     je siEsOperador
+    
+    ; si llega hasta aqui es porque no es un operador valido
     jmp noEsOperador
    
 siEsOperador:
-    add al, -30H
+    add al, -30H; devolverlo a binario
     mov bl, 1
     ret
    
 noEsOperador:
-    add al, -30H
+    add al, -30H; devolverlo a binario
     mov bl, 0
     ret
    
-verificarOperador ENDP
+    verificarOperador ENDP
 
-prioridad PROC
+   prioridad PROC; el operador a analizar ocupa estar en bl
    add bl, 30H; convertirlo a ASCII
    cmp bl, '+'
    je baja
    cmp bl, '('
    je muyBaja
-   mov bl, 2; cuando no es + es / o * que es de mas prioridad
+   
+   mov bl, 2; cuando no es +, es / o * que es de mas prioridad
    jmp salirPrioridad
+   
 baja:
    mov bl, 1
    jmp salirPrioridad
+   
 muyBaja:
    mov bl, 0
-   jmp salirPrioridad
+   
 salirPrioridad:
    ret
-   prioridad ENDP
+   prioridad ENDP; el retorno sobreescribe al operador
    
    ponerEnExpresionPostfija PROC; lo que se pone es al
    mov recorrido, si; preservar si del recorrido original
    mov si, tamanoSubexpresion
-   call verificarNumero
-   cmp bl, 1
-   je moverlo
-moverlo:
-   mov expresionPostfija[si], al
-   inc tamanoSubexpresion
-   mov si, recorrido; devolverlo
+   mov expresionPostfija[si], al; se pone al en el vector
+   inc tamanoSubexpresion; se actualiza el contador
+   mov si, recorrido; devolver el si del recorrido original
    ret
    ponerEnExpresionPostfija ENDP
    
-   ordenar PROC
+   ordenar PROC; cambia la entrada a una expresion postfija
    mov cx, tamanoEntrada
    mov si, 0
 recorrer:
    mov al, entrada[si]
-   mov entradaActual, al
+   mov entradaActual, al; preserva el caracter actual en una variable
    
    call verificarNumero
    cmp bl, 1
@@ -420,115 +397,121 @@ recorrer:
    je parentesisCerrado
    
    ; si llega hasta aqui es porque es un espacio en blanco u otro caracter
-   call imprimirErrorChar
-   
-   jmp continuar; ignora espacios en blanco
+   call imprimirErrorChar; se maneja como error
    
 esNumero:
-   call ponerEnExpresionPostfija
+   call ponerEnExpresionPostfija; si es un numero se agrega a la expresion
    jmp continuar
    
-saltoConejo:
+saltoTemporal:
    loop recorrer
    jmp salirOrdenar
    
 esOperador:
    ;verificar si pila esta vacia
    cmp tamanoPila, 0
-   je meterAPila
+   je meterAPila; si la pila esta vacia se mete a la pila
    mov bl, al
    call prioridad
-   mov dl, bl
-   pop bx
-   push bx
-   call prioridad
-   cmp dl, bl
-   jg meterAPila; mayor que
-   ;cuando es menor o igual hay que desapilarlo
+   mov dl, bl; en dl queda la prioridad del operador actual
+   pop bx; conseguir el caracter mas arriba de la pila en bl
+   push bx; aun no se quiere sacar de la pila, por lo que se agrega de nuevo
+   call prioridad; la prioridad del operador anterior queda en bl
+   cmp dl, bl; operador actual == operador anterior?
+   jg meterAPila; si el operador actual es mayor, se mete a la pila
+   ;cuando es menor o igual hay que desapilar los operadores anteriores hasta que se encuentre a uno menor
    
 comparar:
    
-   mov dh, al; guardar la entrada que se esta leyendo
+   mov dh, al; guardar la entrada que se esta leyendo en dh
    
    cmp tamanoPila, 0
-   je salirDesapilar
+   je salirDesapilar; si la pila esta vacia no se desapila mas
    
-   pop bx
-   push bx
+   pop bx; conseguir el operador de la cima en bl
+   push bx; devolverlo por mientras
    call prioridad
-   cmp bl, 0; si es parentesis cerrado
-   je salirDesapilar
+   cmp bl, 0; Es parentesis abierto?
+   je salirDesapilar; se sale en cuanto se encuentra un parentesis
    cmp bl, dl; prioridad de la cima de la pila contra el simbolo actual
-   jl salirDesapilar; si es menor es que es un parentesis y se sale
+   jl salirDesapilar; si es menor se sale
+   
+   ; si se llega hasta aqui es porque se tiene que desapilar
    
    pop bx
    mov al, bl
    call ponerEnExpresionPostfija
-   dec tamanoPila
-   jmp comparar; repetir hasta que se salga, encuentre a un menor
+   dec tamanoPila; se actualiza el contador
+   jmp comparar; repetir hasta que encuentre un menor o un parentesis
    
 salirDesapilar:
    mov al, entradaActual; devolver a al la entrada
-   jmp meterAPila
+   jmp meterAPila; despues de desapilar, se mete el operador actual en la pila
    
 meterAPila:
    push ax
-   inc tamanoPila
+   inc tamanoPila; se actualiza el contador
    jmp continuar
    
 parentesisAbierto:
-   jmp meterAPila
+   jmp meterAPila; si es un parentesis abierto se mete directo a la pila
    jmp continuar
    
 parentesisCerrado:
-   ; quitar cosas hasta encontrar a (
    
-   compararC:
+   ; desapilar hasta encontrar al parentesis abierto (
    
-   cmp tamanoPila, 0
-   je salirDesapilarC
+compararCerrado:
    
-   pop bx
-   push bx
-   call prioridad
-   cmp bl, 0; si es cero es (
-   je quitarParentesis
+   cmp tamanoPila, 0; si la pila queda vacia se deja de desapilar
+   je salirDesapilarCerrado
    
-   pop bx
-   dec tamanoPila
+   pop bx; se guarda la cima de la pila en bl
+   push bx; se devuelve a la pila por mientras
+   call prioridad; la prioridad de la cima queda en bl
+   cmp bl, 0; si es cero es el parentesis abierto (
+   je quitarParentesis; se saca el parentesis de la pila y se termina de desapilar
+   
+   ; si se llega hasta aqui es porque hay que desapilarlo
+   
+   pop bx; se saca de la pila
+   dec tamanoPila; se actualiza el contador
    mov al, bl
-   call ponerEnExpresionPostfija
-   jmp compararC; repetir hasta que se salga
+   call ponerEnExpresionPostfija; se pone en la expresion
+   jmp compararCerrado; repetir hasta que se encuentre al parentesis abierto (
    
 quitarParentesis:
-   pop bx; quito el parentesis
-   dec tamanoPila
-   jmp salirDesapilarC
+   pop bx; se saca el parentesis de la pila
+   dec tamanoPila; se actualiza el contador
+   jmp salirDesapilarCerrado
    
-salirDesapilarC:
+salirDesapilarCerrado:
    mov al, entradaActual; devolver a al la entrada
    jmp continuar
    
 continuar:
    inc si
-   ;loop recorrer
-   jmp saltoConejo
+   jmp saltoTemporal; hacer el loop
    
 salirOrdenar:
    ;vaciar la pila
    cmp tamanoPila, 0
-   je salirVaciarPila
+   je salirVaciarPila; si no hay nada en la pila, se sale del proc
    
-   mov cx, tamanoPila
+   mov cx, tamanoPila; se usa el contador para saber cuantas iteraciones hacer
 quitar:
    pop bx
    dec tamanoPila
+   
+   ;si son parentesis, no se ponen en la expresion
    cmp bl, -8H; ( en binario
    je continuarQuitar
    cmp bl, -7H; ) en binario
    je continuarQuitar
+   
    mov al, bl
    call ponerEnExpresionPostfija
+   
 continuarQuitar:
    loop quitar
    
@@ -536,17 +519,17 @@ salirVaciarPila:
    ret
    ordenar ENDP
    
-postfija PROC
+    postfija PROC
     ;Se limpian los registros que se van a necesitar para realizar las operaciones
     mov cx, 25
     mov si, 0
     loopGeneral:
     mov al, expresionPostfija[si]
         cmp al, 20h
-        je saltarPostfija
+        je saltarPostfija; el espacio vacio indica el final de la expresion postfija
         
         call verificarOperador
-        cmp bl, 1
+        cmp bl, 1; si bl es 1, significa que es un operador
         je armarOperacion
         
     continuarPostfija:
@@ -555,12 +538,13 @@ postfija PROC
     saltarPostfija:
         inc si
         loop loopGeneral
-    
+        
+        ; el resultado final queda en la pila 
         pop ax
         mov resultado, al
         ret
     
-postfija ENDP
+    postfija ENDP
 
     armarOperacion:
         add al, 30H; los operadores se pasan a ascii
@@ -569,8 +553,8 @@ postfija ENDP
         mov operando1, dl
         mov operando2, bl
         mov operador, al
-        operacion operando1, operando2, operador
-        mov al, operando1
+        operacion operando1, operando2, operador; se llama a la macro
+        mov al, operando1; en operando1 queda la respuesta de la sub-operacion
         jmp continuarPostfija
 
 salir:
