@@ -225,8 +225,8 @@ formatearNumeros:
     mov al, ah; se guarda el resto de los numeros
     inc si
     loop formatearNumeros; se repite hasta que ya no queden numeros
-    mov cx, 4
-    mov si, 3
+    mov cx, 3
+    mov si, 2
 imprimirUno:
     mov bl, guardarRespuesta[si]
     call imprimirChar; imprime cada numero individual de la respuesta
