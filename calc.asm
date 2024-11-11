@@ -66,7 +66,7 @@ Begin:
     mov tamanoSubexpresion, 0
     mov entradaActual, 0
     call limpiarVectorShunting; proc que sobreescribe todas las posiciones con espacio (20H)
-    
+    call limpiarVectorEntrada ; hace lo mismo que el proc anterior
     ;recibir la entrada
     mov cx, 25; la entrada es de maximo 25 caracteres
     mov si, 0
@@ -180,6 +180,16 @@ sobreescribir:
     ret
     limpiarVectorShunting ENDP
     
+    limpiarVectorEntrada PROC
+    mov cx, 25; el vector es de 25 espacios
+    mov si, 0 ;indice
+sobreescribirEntrada:
+    mov entrada[si], 20H; se sobreescribe lo que sea que haya en el vector con espacio (20H)
+    inc si
+    loop sobreescribirEntrada
+    ret
+    limpiarVectorEntrada ENDP
+ 
     clearCursor PROC; limpia la posicion en la que esta el cursor                                  
     mov ax, 0600h                             
     mov bh, 07h                               
@@ -215,6 +225,7 @@ sobreescribir:
     imprimirChar ENDP
    
     imprimirResultado PROC
+    guardarRegistros ax, cx, si
     mov al, resultado
     mov cx, 3
     mov si, 0
@@ -232,6 +243,7 @@ imprimirUno:
     call imprimirChar; imprime cada numero individual de la respuesta
     dec si
     loop imprimirUno
+    restaurarRegistros si, cx, ax
     ret
     imprimirResultado ENDP
    
@@ -520,6 +532,9 @@ salirVaciarPila:
    ordenar ENDP
    
     postfija PROC
+    ; se guardan los registros para evitar que se sobrescriban
+    guardarRegistros ax, bx, cx
+    guardarRegistros dx, si
     ;Se limpian los registros que se van a necesitar para realizar las operaciones
     mov cx, 25
     mov si, 0
@@ -542,6 +557,9 @@ salirVaciarPila:
         ; el resultado final queda en la pila 
         pop ax
         mov resultado, al
+        ; se restauran los registros con los valores originales
+        restaurarRegistros si,dx, cx
+        restaurarRegistros bx, ax
         ret
     
     postfija ENDP
@@ -557,6 +575,7 @@ salirVaciarPila:
         mov al, operando1; en operando1 queda la respuesta de la sub-operacion
         jmp continuarPostfija
 
+; encargado de la salida del programa
 salir:
     .EXIT
 
